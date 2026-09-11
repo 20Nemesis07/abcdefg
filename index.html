@@ -1,11 +1,226 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My First Website</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OIL SIF-Precursor Prototype Roadmap</title>
+  <style>
+    :root { font-family: Arial, sans-serif; color-scheme: light; }
+    body { margin: 0; background: #f6f8fb; color: #1b1f24; }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    h1, h2, h3 { margin-bottom: 10px; }
+    .card { background: #fff; border: 1px solid #d8dee4; border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    .metric { background: #eef5ff; border-radius: 8px; padding: 12px; }
+    .metric strong { display: block; font-size: 24px; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { border: 1px solid #d8dee4; padding: 8px; text-align: left; vertical-align: top; }
+    th { background: #f0f4f8; }
+    textarea { width: 100%; min-height: 90px; padding: 8px; border-radius: 8px; border: 1px solid #c7d0d9; }
+    button { padding: 10px 14px; border: 0; border-radius: 8px; background: #0969da; color: #fff; cursor: pointer; margin-top: 8px; }
+    button:hover { background: #0757b8; }
+    .small { color: #57606a; font-size: 13px; }
+  </style>
 </head>
 <body>
-    wasgud gng
+  <div class="container">
+    <h1>OIL HSSE SIF-Precursor AI Prototype</h1>
+    <p>
+      Prototype objective: automatically flag <strong>SIF potential</strong>, map reports to
+      <strong>IOGP Life-Saving Rules</strong>, and surface recurring precursor patterns for targeted interventions.
+    </p>
+
+    <section class="card">
+      <h2>Implementation Roadmap</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Phase</th>
+            <th>What to Build</th>
+            <th>Deliverable</th>
+            <th>Success Metric</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. Data foundation (Week 1)</td>
+            <td>Collect UA/UC, near-miss, incident text; standardize fields (site, activity, location, barrier failure).</td>
+            <td>Clean training dataset and data dictionary.</td>
+            <td>&gt;95% reports parsable with mandatory fields.</td>
+          </tr>
+          <tr>
+            <td>2. SIF classifier baseline (Week 2)</td>
+            <td>Rule/keyword baseline and annotation guidelines for SIF vs non-SIF labels.</td>
+            <td>Baseline model API + confidence score.</td>
+            <td>Recall focus: SIF recall &gt;85% on validation set.</td>
+          </tr>
+          <tr>
+            <td>3. Life-Saving Rule mapper (Week 3)</td>
+            <td>Multi-label text classification to Energy Isolation, Hot Work, Confined Space, Line of Fire, etc.</td>
+            <td>LSR auto-tag service with top-2 tags.</td>
+            <td>Macro-F1 &gt;75% on labeled set.</td>
+          </tr>
+          <tr>
+            <td>4. Precursor pattern mining (Week 4)</td>
+            <td>Extract activity-location-barrier patterns and frequency trends.</td>
+            <td>Ranked precursor clusters and heatmaps.</td>
+            <td>Top clusters explain &gt;60% SIF-potential reports.</td>
+          </tr>
+          <tr>
+            <td>5. Dashboard + workflow (Week 5)</td>
+            <td>Role-based dashboard ranking sites and activities by SIF precursor density.</td>
+            <td>Interactive dashboard with filters and drill-down.</td>
+            <td>HSE users can identify top-5 intervention targets in &lt;2 minutes.</td>
+          </tr>
+          <tr>
+            <td>6. Pilot + improvement (Week 6+)</td>
+            <td>Human-in-the-loop review, model retraining, threshold tuning, governance.</td>
+            <td>Pilot report and go-live plan.</td>
+            <td>Reduction in missed high-potential events month-on-month.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Interactive Prototype (Sample Analysis)</h2>
+      <p class="small">
+        Add one report per line below and click analyze. The demo combines seeded OIL-like examples with your input.
+      </p>
+      <textarea id="userReports" placeholder="Example: Valve isolation bypassed during pump maintenance near separator vessel."></textarea>
+      <button id="analyzeBtn">Run SIF + LSR Analysis</button>
+      <div id="summary" class="grid" style="margin-top:12px;"></div>
+      <h3>Report-level output</h3>
+      <div id="reportTable"></div>
+      <h3>Recurring precursor patterns</h3>
+      <div id="patternTable"></div>
+    </section>
+  </div>
+
+  <script>
+    const seededReports = [
+      { text: "Welder started hot work without gas test near crude tank; fire watch absent.", site: "Duliajan", activity: "Maintenance", location: "Tank Farm", barrierFailure: "Permit control" },
+      { text: "Operator slipped on wet floor in office corridor; minor bruise.", site: "Jorhat", activity: "Walking", location: "Office", barrierFailure: "Housekeeping" },
+      { text: "Lockout-tagout skipped while working on energized panel at CPF.", site: "Moran", activity: "Electrical", location: "CPF", barrierFailure: "Energy isolation" },
+      { text: "Worker entered pit for inspection without confined space permit.", site: "Duliajan", activity: "Inspection", location: "Pit", barrierFailure: "Confined space controls" },
+      { text: "Dropped object from crane narrowly missed rig crew in drilling yard.", site: "Sivasagar", activity: "Lifting", location: "Rig Yard", barrierFailure: "Line of fire control" }
+    ];
+
+    const lsrRules = [
+      { name: "Energy Isolation", terms: ["lockout", "tagout", "isolation", "energized", "electrical", "panel", "valve"] },
+      { name: "Hot Work", terms: ["hot work", "weld", "welding", "spark", "flame", "gas cutting", "fire"] },
+      { name: "Confined Space", terms: ["confined", "tank", "vessel", "pit", "manhole", "entry permit"] },
+      { name: "Line of Fire", terms: ["crane", "dropped object", "struck", "pinch", "moving equipment", "line of fire"] }
+    ];
+
+    const sifTerms = [
+      "fatal", "fatality", "explosion", "energized", "high pressure", "confined", "hot work", "crane",
+      "dropped object", "line of fire", "toxic gas", "isolation", "fire"
+    ];
+
+    function detectLSR(text) {
+      const lc = text.toLowerCase();
+      const matches = lsrRules
+        .map(rule => ({ rule: rule.name, score: rule.terms.filter(term => lc.includes(term)).length }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+      return matches.length ? matches[0].rule : "General Safety";
+    }
+
+    function classifySIF(text) {
+      const lc = text.toLowerCase();
+      const score = sifTerms.filter(term => lc.includes(term)).length;
+      return { label: score >= 2 ? "SIF-Potential" : "Non-SIF", score };
+    }
+
+    function inferField(text, options, fallback) {
+      const lc = text.toLowerCase();
+      const hit = options.find(item => lc.includes(item.key));
+      return hit ? hit.value : fallback;
+    }
+
+    function buildInputReports() {
+      const userLines = document.getElementById("userReports").value
+        .split("\n")
+        .map(v => v.trim())
+        .filter(Boolean)
+        .map(text => ({
+          text,
+          site: "User Input Site",
+          activity: inferField(text, [
+            { key: "weld", value: "Maintenance" },
+            { key: "inspect", value: "Inspection" },
+            { key: "lift", value: "Lifting" },
+            { key: "drive", value: "Transport" }
+          ], "General"),
+          location: inferField(text, [
+            { key: "tank", value: "Tank Farm" },
+            { key: "yard", value: "Yard" },
+            { key: "pit", value: "Pit" },
+            { key: "panel", value: "Electrical Room" }
+          ], "Unknown"),
+          barrierFailure: inferField(text, [
+            { key: "permit", value: "Permit control" },
+            { key: "isolation", value: "Energy isolation" },
+            { key: "gas test", value: "Gas testing" }
+          ], "Unspecified")
+        }));
+      return [...seededReports, ...userLines];
+    }
+
+    function render() {
+      const reports = buildInputReports();
+      const analyzed = reports.map((r, i) => {
+        const sif = classifySIF(r.text);
+        const lsr = detectLSR(r.text);
+        return { id: i + 1, ...r, sif: sif.label, sifScore: sif.score, lsr };
+      });
+
+      const sifCount = analyzed.filter(r => r.sif === "SIF-Potential").length;
+      const density = ((sifCount / analyzed.length) * 100).toFixed(1);
+      const topSite = Object.entries(analyzed.reduce((a, r) => ((a[r.site] = (a[r.site] || 0) + (r.sif === "SIF-Potential" ? 1 : 0)), a), {}))
+        .sort((a, b) => b[1] - a[1])[0];
+      const topActivity = Object.entries(analyzed.reduce((a, r) => ((a[r.activity] = (a[r.activity] || 0) + (r.sif === "SIF-Potential" ? 1 : 0)), a), {}))
+        .sort((a, b) => b[1] - a[1])[0];
+
+      document.getElementById("summary").innerHTML = `
+        <div class="metric">Total reports<strong>${analyzed.length}</strong></div>
+        <div class="metric">SIF-potential reports<strong>${sifCount}</strong></div>
+        <div class="metric">SIF precursor density<strong>${density}%</strong></div>
+        <div class="metric">Top site/activity<strong>${topSite ? topSite[0] : "-"} / ${topActivity ? topActivity[0] : "-"}</strong></div>
+      `;
+
+      document.getElementById("reportTable").innerHTML = `
+        <table>
+          <thead><tr><th>ID</th><th>Report</th><th>SIF Class</th><th>IOGP Rule</th><th>Site</th><th>Activity</th></tr></thead>
+          <tbody>
+            ${analyzed.map(r => `<tr><td>${r.id}</td><td>${r.text}</td><td>${r.sif} (score ${r.sifScore})</td><td>${r.lsr}</td><td>${r.site}</td><td>${r.activity}</td></tr>`).join("")}
+          </tbody>
+        </table>`;
+
+      const patternMap = {};
+      analyzed.forEach(r => {
+        const key = `${r.activity} | ${r.location} | ${r.barrierFailure}`;
+        if (!patternMap[key]) patternMap[key] = { total: 0, sif: 0 };
+        patternMap[key].total += 1;
+        patternMap[key].sif += r.sif === "SIF-Potential" ? 1 : 0;
+      });
+
+      const patterns = Object.entries(patternMap)
+        .map(([k, v]) => ({ key: k, total: v.total, sifDensity: ((v.sif / v.total) * 100).toFixed(1) }))
+        .sort((a, b) => Number(b.sifDensity) - Number(a.sifDensity));
+
+      document.getElementById("patternTable").innerHTML = `
+        <table>
+          <thead><tr><th>Pattern (Activity | Location | Barrier Failure)</th><th>Reports</th><th>SIF Density</th></tr></thead>
+          <tbody>
+            ${patterns.map(p => `<tr><td>${p.key}</td><td>${p.total}</td><td>${p.sifDensity}%</td></tr>`).join("")}
+          </tbody>
+        </table>`;
+    }
+
+    document.getElementById("analyzeBtn").addEventListener("click", render);
+    render();
+  </script>
 </body>
 </html>
